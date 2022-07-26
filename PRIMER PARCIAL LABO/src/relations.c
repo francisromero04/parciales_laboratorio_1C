@@ -28,13 +28,17 @@ static int Relations_BuyProduct(sUsers usuarios[], int TAM_U, sProducts producto
 	if(trackings != NULL && productos != NULL && usuarios != NULL && TAM_P > 0 && TAM_T > 0 && TAM_U > 0)
 	{
 		indexProd = sProducts_BuyProduct(productos, TAM_P);
-		utn_getNumero("INGRESE CANTIDAD REQUERIDA DEL PRODUCTO: ", "ERROR. ", 1, 100, 2, &cantidadRequerida);
-		productos[indexProd].stockDisponible -= cantidadRequerida;
-		precioTotal = productos[indexProd].precio * cantidadRequerida;
-		printf("PRECIO A PAGAR: $%d \n", precioTotal);
-		trackingIndex = sTrack_addTracks(trackings, TAM_T, productos[indexProd].idProducto,
-				        cantidadRequerida, usuarios[sesionIniciada].codigoPostal);
-		trackings[trackingIndex].FK_idComprador = usuarios[sesionIniciada].idUsuario;
+
+		if(indexProd != -1 && indexProd != -2)
+		{
+			utn_getNumero("INGRESE CANTIDAD REQUERIDA DEL PRODUCTO: ", "ERROR. ", 1, 100, 2, &cantidadRequerida);
+			productos[indexProd].stockDisponible -= cantidadRequerida;
+			precioTotal = productos[indexProd].precio * cantidadRequerida;
+			printf("PRECIO A PAGAR: $%d \n", precioTotal);
+			trackingIndex = sTrack_addTracks(trackings, TAM_T, productos[indexProd].idProducto,
+							cantidadRequerida, usuarios[sesionIniciada].codigoPostal);
+			trackings[trackingIndex].FK_idComprador = usuarios[sesionIniciada].idUsuario;
+		}
 	}
 
 	return rtn;
@@ -126,6 +130,7 @@ static int Relations_PrintPurchases(sTrack trackings[], int TAM_T, sProducts pro
 				idProd = trackings[i].FK_idProducto;//FIND THE PRODUCT INDEX OF THE ID
 				indexId = sProducts_findProductsByID(productos, TAM_P, idProd);
 				Relations_PrintPurchase(trackings[i], productos[indexId]);
+				puts("+--------------------------------------+");
 				rtn = 1;
 			}
 		}
@@ -143,12 +148,9 @@ static int Relations_SellProduct(sUsers usuarios[], int TAM_U, sProducts product
 		{
 			if(TAM_U > 0 && TAM_P > 0)
 			{
-				if(sesionIniciada != -1)
-				{
-					indexProd = sProducts_addProducts(productos, TAM_P);
-					productos[indexProd].FK_idVendedor = usuarios[sesionIniciada].idUsuario;
-					rtn = 1;
-				}
+				indexProd = sProducts_addProducts(productos, TAM_P);
+				productos[indexProd].FK_idVendedor = usuarios[sesionIniciada].idUsuario;
+				rtn = 1;
 			}
 		}
 
@@ -167,13 +169,14 @@ static int Relations_PrintSellings(sTrack trackings[], int TAM_T, sProducts prod
 		{
 			if(productos[i].FK_idVendedor == idUsuario)
 			{
-				for(j = 0; j < TAM_T; i++)
+				for(j = 0; j < TAM_T; j++)
 				{
 					if(trackings[j].FK_idProducto == productos[i].idProducto)
 					{
-						if(trackings[j].isEmpty == EN_VIAJE || trackings[j].isEmpty == ENTREGADO || trackings[j].isEmpty == BAJA)
+						if(Relations_SellingsMades(trackings, TAM_T, productos, TAM_P, idUsuario) != -1)
 						{
 							Relations_PrintPurchase(trackings[j], productos[i]);
+							puts("+--------------------------------------+");
 						}
 					}
 				}
@@ -252,11 +255,6 @@ static void Relations_PrintTrackings(sTrack tracking, sProducts producto)
 {
 	char estadoTracking[TAM_CHAR];
 
-	puts("\n\t\t\tTRACKING GLOBAL");
-	puts("+--------------------------------------------------------------------------------------+");
-	puts("|   ID TRACKING  |   ID VENDEDOR  |  ID COMPRADOR  | NOMBRE  PRODUCTO |     ESTADO     |");
-	puts("+--------------------------------------------------------------------------------------+");
-
 	printf("|%-16d|%-16d|%-16d|%-18s|", tracking.idTrack, producto.FK_idVendedor, tracking.FK_idComprador, producto.nombreProducto);
 
 	switch(tracking.isEmpty)
@@ -284,6 +282,8 @@ static int Relations_PrintGlobalTrackings(sTrack trackings[], int TAM_T, sProduc
 	int i;
 	int rtn = -1;
 	int indexProd;
+	int contadorVueltas = 0;
+	int flagTrack = 0;
 
 	if (trackings != NULL && TAM_T > 0)
 	{
@@ -291,20 +291,33 @@ static int Relations_PrintGlobalTrackings(sTrack trackings[], int TAM_T, sProduc
 		{
 			if(trackings[i].isEmpty != LIBRE)
 			{
+				contadorVueltas++;
+
+				if(contadorVueltas == 1)
+				{
+					puts("\n\t\t\tTRACKING GLOBAL");
+					puts("+--------------------------------------------------------------------------------------+");
+					puts("|   ID TRACKING  |   ID VENDEDOR  |  ID COMPRADOR  | NOMBRE  PRODUCTO |     ESTADO     |");
+					puts("+--------------------------------------------------------------------------------------+");
+				}
+
 				indexProd = sProducts_findProductsByID(productos, TAM_P, trackings[i].FK_idProducto);
 
 				if(indexProd != -1)
 				{
 					sTrack_actualizarEstado(trackings, TAM_T);
 					Relations_PrintTrackings(trackings[i], productos[indexProd]);
-					break;
+					flagTrack = 1;
 					rtn = 1;
 				}
 			}
 			else
 			{
-				puts("\nTRACKING GLOBAL SIN COMPRAS REGISTRADAS.");
-				break;
+				if(flagTrack == 0)
+				{
+					puts("\nTRACKING GLOBAL SIN COMPRAS REGISTRADAS.");
+					break;
+				}
 			}
 		}
 	}
@@ -318,6 +331,7 @@ static int Relations_PrintGlobalTrackings(sTrack trackings[], int TAM_T, sProduc
 static int Relations_UserMenu(sUsers usuarios[], int TAM_U, sProducts productos[], int TAM_P, sTrack trackings[], int TAM_T, int sesionIniciada)
 {
 	int opcion;
+	int opcionVenta;
 	int rtn = -1;
 
 	if(usuarios != NULL && productos != NULL && trackings != NULL && TAM_U > 0 && TAM_P > 0 && TAM_T > 0)
@@ -329,12 +343,12 @@ static int Relations_UserMenu(sUsers usuarios[], int TAM_U, sProducts productos[
 			puts("\t\t\t\t\t*********** USUARIO *************");
 			puts("\t\t\t\t\t*********************************\n");
 			puts("1) COMPRAR");
-			puts("2) VENDER");
+			puts("2) VENDER / REPONER STOCK");
 			puts("3) ESTADO DE COMPRAS");
 			puts("4) ESTADO DE VENTAS");
 			puts("5) CERRAR SESION (USUARIO)\n");
 
-			utn_getNumero("INGRESE OPCION: ", "ERROR. ", 0, 5, 2, &opcion);
+			utn_getNumero("INGRESE OPCION: ", "ERROR. ", 1, 5, 2, &opcion);
 
 			switch(opcion)
 			{
@@ -343,7 +357,18 @@ static int Relations_UserMenu(sUsers usuarios[], int TAM_U, sProducts productos[
 				break;
 
 				case 2:
-					Relations_SellProduct(usuarios, TAM_U, productos, TAM_P, sesionIniciada);
+					utn_getNumero("\nVENDER UN PRODUCTO (1) o 2-REPONER STOCK(2)? ", "ERROR. ", 1, 2, 3, &opcionVenta);
+
+					switch(opcionVenta)
+					{
+						case 1:
+							Relations_SellProduct(usuarios, TAM_U, productos, TAM_P, sesionIniciada);
+						break;
+
+						case 2:
+							sProducts_ReplaceStock(productos, TAM_P, usuarios[sesionIniciada].idUsuario);
+						break;
+					}
 				break;
 
 				case 3:
@@ -353,12 +378,12 @@ static int Relations_UserMenu(sUsers usuarios[], int TAM_U, sProducts productos[
 				case 4:
 					Relations_SellingsStatus(trackings, TAM_T, productos, TAM_P, usuarios, TAM_U, usuarios[sesionIniciada].idUsuario);
 				break;
+
+				case 5:
+					puts("\nSESION CERRADA.");
+				break;
 			}
 		}while(opcion != 5);
-	}
-	else
-	{
-		rtn = 0; //ERROR ARRAYS NULOS
 	}
 
 	return rtn;
@@ -368,6 +393,7 @@ static int Relations_AdminMenu(sUsers usuarios[], int TAM_U, sProducts productos
 {
 	int rtn = -1;
 	int opcion;
+	char nombreProducto[TAM_CHAR];
 
 	if(trackings != NULL && productos != NULL && usuarios != NULL && TAM_T > 0 && TAM_P > 0 && TAM_U > 0)
 	{
@@ -382,9 +408,10 @@ static int Relations_AdminMenu(sUsers usuarios[], int TAM_U, sProducts productos
 			puts("3) BAJA DE UN PRODUCTO");
 			puts("4) BAJA DE UN USUARIO");
 			puts("5) VER TRACKING GLOBAL");
-			puts("6) CERRAR SESION (ADMIN)");
+			puts("6) FILTRAR POR NOMBRE");
+			puts("7) CERRAR SESION (ADMIN)");
 
-			utn_getNumero("\nINGRESE OPCION: ", "ERROR. ", 1, 6, 2, &opcion);
+			utn_getNumero("\nINGRESE OPCION: ", "ERROR. ", 1, 7, 2, &opcion);
 
 			switch(opcion)
 			{
@@ -394,18 +421,10 @@ static int Relations_AdminMenu(sUsers usuarios[], int TAM_U, sProducts productos
 
 				case 2:
 					sProducts_sortProducts(productos, TAM_P);
-					puts("\n\t\t LISTA DE PRODUCTOS");
-					puts("+----------------------------------------------------------------+");
-					puts("| ID |     NOMBRE     |   STOCK  |   PRECIO   |     CATEGORIA    |");
-					puts("+----------------------------------------------------------------+");
 					sProducts_printProducts(productos, TAM_P);
 				break;
 
 				case 3:
-					puts("\n\t\t LISTA DE PRODUCTOS");
-					puts("+----------------------------------------------------------------+");
-					puts("| ID |     NOMBRE     |   STOCK  |   PRECIO   |     CATEGORIA    |");
-					puts("+----------------------------------------------------------------+");
 					sProducts_removeProducts(productos, TAM_P);
 				break;
 
@@ -416,9 +435,26 @@ static int Relations_AdminMenu(sUsers usuarios[], int TAM_U, sProducts productos
 				case 5:
 					Relations_PrintGlobalTrackings(trackings, TAM_T, productos, TAM_P);
 				break;
+
+				case 6:
+					utn_getString("INGRESE EL NOMBRE DEL PRODUCTO A BUSCAR: ", "ERROR. ", 3, TAM_CHAR, nombreProducto);
+
+					if(sProducts_FindByName(productos, TAM_P, nombreProducto) != -1)
+					{
+						sProducts_printFindProductsByName(productos, TAM_P, nombreProducto);
+					}
+					else
+					{
+						puts("\nNO SE ENCONTRO NINGUN PRODUCTO CON ESE NOMBRE.");
+					}
+				break;
+
+				case 7:
+					puts("\nSESION CERRADA.");
+				break;
 			}
 
-		} while(opcion != 6);
+		} while(opcion != 7);
 
 		rtn = 1;
 	}

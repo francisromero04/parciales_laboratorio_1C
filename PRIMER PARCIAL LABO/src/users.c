@@ -265,19 +265,24 @@ int sUsers_login(sUsers usuarios[], int TAM_U)
 
 	if(usuarios != NULL && TAM_U > 0)
 	{
-		utn_getEmail("\nINGRESE SU EMAIL: ", "ERROR. ", 2, email);
+		utn_getEmail("\nINGRESE SU EMAIL: ", "ERROR. REINGRESE EMAIL: ", 2, email);
 		indexCorreo = sUsers_findByEmail(usuarios, TAM_U, email);
 
-		if(indexCorreo != -1)
+		if(indexCorreo != -1 && usuarios[indexCorreo].isEmpty != BAJA)
 		{
 			while(usuarios[indexCorreo].isEmpty == OCUPADO)
 			{
-				utn_getPassword("INGRESE SU CONTRASEÑA: ", "CONTRASEÑA INCORRECTA, REINGRESE: ", 4, MAX_LEN_PASSWORD, 2, password);
+				utn_getPassword("INGRESE SU CONTRASEÑA: ", "ERROR, REINGRESE: ", 4, MAX_LEN_PASSWORD, 2, password);
 
 				if(strcmp(usuarios[indexCorreo].password, password) == 0)
 				{
 					rtn = 1;
 					puts("\nSE HA INICIADO SESION CORRECTAMENTE.");
+					break;
+				}
+				else
+				{
+					puts("\nCONTRASEÑA INCORRECTA.");
 					break;
 				}
 			}

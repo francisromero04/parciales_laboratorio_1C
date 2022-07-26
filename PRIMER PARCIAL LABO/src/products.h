@@ -33,7 +33,13 @@ void sProducts_initProducts(sProducts array[], int TAM);
 int sProducts_printProducts(sProducts Pasajeros[], int TAM);
 int sProducts_CargaForzada(sProducts listaPasajeros[]);
 int sProducts_findProductsByID(sProducts array[], int TAM, int ID);
+int sProducts_verifyUserProducts(sProducts productList[], int len, int userID) ;
 int sProducts_BuyProduct(sProducts productos[], int TAM);
 int sProducts_sortProducts(sProducts productos[], int TAM);
+int sProducts_printUserProducts(sProducts Products[], int TAM, int idUsuario);
+int sProducts_ReplaceStock(sProducts productos[], int TAM, int idUsuario);
+int sProduct_sortProductsByStock(sProducts productos[], int TAM);
+int sProducts_FindByName(sProducts productos[], int TAM_U, char nombreProducto[]);
+int sProducts_printFindProductsByName(sProducts productos[], int TAM, char nombre[]);
 
 #endif /* PRODUCTS_H_ */

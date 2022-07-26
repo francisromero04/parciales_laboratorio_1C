@@ -38,6 +38,10 @@ int main(void)
 				case 2:
 					sUsers_addUsers(usuarios, TAM_ARRAY);
 				break;
+
+				case 3:
+					puts("\nPROGRAMA CERRADO.");
+				break;
 			}
 
 		}while(opcion != 3);

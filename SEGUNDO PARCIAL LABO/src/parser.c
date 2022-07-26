@@ -3,6 +3,7 @@
 #include "../inc/LinkedList.h"
 #include "../inc/parser.h"
 #include "../inc/Peliculas.h"
+#include "../inc/Controller.h"
 
 /** \brief Parsea los datos los datos de los pasajeros desde el archivo data.csv (modo texto).
  *
@@ -15,7 +16,7 @@ int parser_PeliculasFromText(FILE* pFile, LinkedList* pArrayListPeliculas)
 {
 	int rtn = -1;
 	Peliculas* auxPeliculas;
-	int contadorIdIncialLista=controller_getUltimoId();
+	int contadorIdIncialLista = controller_getUltimoId();
 	char buffer[4][50];
 	int aux;
 

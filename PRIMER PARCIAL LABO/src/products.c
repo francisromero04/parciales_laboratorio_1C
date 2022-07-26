@@ -5,7 +5,6 @@
 static int sProducts__getID(void);
 static int sProducts_getFreeIndex(sProducts array[], int TAM);
 static sProducts sProducts_enterData(void);
-static sProducts sProducts_modifyOne(sProducts Producto);
 static void sProducts_printOne(sProducts Producto);
 
 //-----------------------------------------------------STATICS SOURCES---------------------------------------------------
@@ -118,80 +117,25 @@ static sProducts sProducts_enterData(void)
 	return auxiliar;
 }
 
-/// @fn sProducts sProducts_modifyOne(sProducts)
-/// @brief Recibe un tipo de dato sProducts, muestra un menu con opciones para
-/// que el usuario selecione cual dato quiere modificar y los carga en un
-/// auxiliar para luego igualarlo al tipo de dato que recibi�
-/// @param Producto
-/// @return Retorna
-static sProducts sProducts_modifyOne(sProducts Producto)
+int sProducts_FindByName(sProducts productos[], int TAM_U, char nombreProducto[])
 {
-	int opcionMenuModificar;
-	int opcionTipoProducto;
+	int i;
+	int rtn = -1;
 
-	do
+	if(productos != NULL && TAM_U > 0)
 	{
-		puts("\nCAMPOS A MODIFICAR:");
-		puts("1. NOMBRE");
-		puts("2. PRECIO");
-		puts("3. STOCK");
-		puts("4. CATEGORIA");
-		puts("5. GUARDAR CAMBIOS");
-
-		utn_getNumero("\nINGRESE LA OPCION DEL CAMPO A MODIFICAR: ", "ERROR. ", 1, 5, 3, &opcionMenuModificar);
-
-		switch(opcionMenuModificar)
+		for (i = 0; i < TAM_U; i++)
 		{
-			case 1:
-				if(utn_getString("INGRESE EL NUEVO NOMBRE: ", "ERROR. ", 3, TAM_CHAR, Producto.nombreProducto) == 0)
-				{
-					puts("EL NOMBRE DEL PRODUCTO SE HA MODIFICADO.");
-				}
-			break;
-
-			case 2:
-				if(utn_getNumero("INGRESE EL NUEVO PRECIO: ", "ERROR .", 0, 999999, 3, &Producto.precio) == 0)
-				{
-					puts("EL PRECIO SE HA MODIFICADO.");
-				}
-			break;
-
-			case 3:
-				if(utn_getNumero("INGRESE EL NUEVO STOCK: ", "ERROR. ", 0, 2000, 3, &Producto.stockDisponible) == 0)
-				{
-					puts("EL STOCK SE HA MODIFICADO.");
-				}
-			break;
-
-			case 4:
-				utn_getNumero("INGRESE NUEVA CATEGORIA (TIPO 1: TECNOLOGIA | TIPO 2: ROPA | TIPO 3: ELECTRODOMESTICOS): ",
-								"ERROR. ", 1, 3, 3, &opcionTipoProducto);
-				switch(opcionTipoProducto)
-				{
-					case 1:
-						Producto.categoria = TECNOLOGIA;
-						puts("LA CATEGORIA SE HA MODIFICADO.");
-					break;
-
-					case 2:
-						Producto.categoria = ROPA;
-						puts("LA CATEGORIA SE HA MODIFICADO.");
-					break;
-
-					case 3:
-						Producto.categoria = ELECTRODOMESTICOS;
-						puts("LA CATEGORIA SE HA MODIFICADO.");
-					break;
-				}
-			break;
-
-			case 5:
-				puts("\nGUARDANDO MODIFICACIONES...");
-			break;
+			if((strcmp(productos[i].nombreProducto, nombreProducto)) == 0 && productos[i].isEmpty != LIBRE)
+			{
+				rtn = i;
+				break;
+			}
 		}
-	}while(opcionMenuModificar != 5);
 
-	return Producto;
+	}
+
+	return rtn;
 }
 
 /// @fn void sProducts_printOne(sProducts, int)
@@ -263,13 +207,41 @@ int sProducts_sortProducts(sProducts productos[], int TAM)
 			}
 		}
 	}
-	else
-	{
-		rtn = 0; //ERROR productosS NULOS O MAL TAM
-	}
+
 	return rtn;
 }
 
+int sProduct_sortProductsByStock(sProducts productos[], int TAM)
+{
+	int rtn = -1;
+	int i;
+	int j;
+	sProducts aux;
+
+	if(productos != NULL)
+	{
+		if(TAM > 0)
+		{
+			for(i = 0; i < TAM - 1; i++)
+			{
+				for(j = i + 1; j < TAM; j++)
+				{
+					if(productos[i].isEmpty && productos[j].isEmpty)
+					{
+						if (productos[i].stockDisponible > productos[j].stockDisponible)
+						{
+							aux = productos[i];
+							productos[i] = productos[j];
+							productos[j] = aux;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return rtn;
+}
 
 //-----------------------------------------------------ABM---------------------------------------------------------------
 
@@ -305,7 +277,66 @@ int sProducts_addProducts(sProducts array[], int TAM)
 		array[index] = auxProducts;
 
 		///RETORNO 1 PARA SABER QUE FUE DADO DE ALTA SATISFACTORIAMENTE
-		rtn = 1;
+		rtn = index;
+	}
+
+	return rtn;
+}
+
+int sProducts_verifyUserProducts(sProducts productos[], int TAM, int idUsuario)
+{
+	int rtn = -1;
+	int i;
+
+	if (productos != NULL)
+	{
+		if (TAM > 0 && idUsuario > 0)
+		{
+			for (i = 0; i < TAM; i++)
+			{	//LISTS EVERY PRODUCT WITH STATUS GIVEN
+				if(productos[i].FK_idVendedor == idUsuario)
+				{
+					if (productos[i].isEmpty == OCUPADO)
+					{
+						rtn = 1;
+					}
+				}
+			}
+		}
+	}
+	return rtn;
+}
+
+int sProducts_ReplaceStock(sProducts productos[], int TAM, int idUsuario)
+{
+	int rtn = -1;
+	int indexProd;
+	int id;
+	int nuevoStock;
+
+	if (productos != NULL)
+	{
+		if (TAM > 0 && idUsuario > 0)
+		{
+			if(sProducts_verifyUserProducts(productos, TAM, idUsuario) == 1)
+			{
+				sProducts_printUserProducts(productos, TAM, idUsuario);
+				utn_getNumero("\nINGRESE ID DEL PRODUCTO: ", "ERROR. ", 1000, 9999, 3, &id);
+				indexProd = sProducts_findProductsByID(productos, TAM, id);
+
+				if(indexProd != -1)
+				{
+					utn_getNumero("INGRESE STOCK A REPONER: ", "ERROR. ", 1, 200, 3, &nuevoStock);
+					productos[indexProd].stockDisponible += nuevoStock;
+					puts("\nSTOCK ACTUALIZADO EXITOSAMENTE.");
+					rtn = 1;
+				}
+			}
+			else
+			{
+				puts("\nUSTED NO TIENE PRODUCTOS A LA VENTA PARA REPONER STOCK.");
+			}
+		}
 	}
 
 	return rtn;
@@ -319,10 +350,6 @@ int sProducts_BuyProduct(sProducts productos[], int TAM)
 
 	if(productos != NULL && TAM > 0)
 	{
-		puts("\n\t\t LISTA DE PRODUCTOS");
-		puts("+----------------------------------------------------------------+");
-		puts("| ID |     NOMBRE     |   STOCK  |   PRECIO   |     CATEGORIA    |");
-		puts("+----------------------------------------------------------------+");
 		sProducts_printProducts(productos, TAM);
 		utn_getNumero("\nINGRESE ID DEL PRODUCTO A COMPRAR: ", "ERROR. ", 1000, 9999, 2, &idProducto);
 
@@ -339,6 +366,10 @@ int sProducts_BuyProduct(sProducts productos[], int TAM)
 				indexProd = sProducts_findProductsByID(productos, TAM, idProducto);
 			}
 			rtn = indexProd;
+		}
+		else
+		{
+			puts("\nEL PRODUCTO QUE USTED REQUIERE COMPRAR NO EXISTE.");
 		}
 	}
 
@@ -396,58 +427,6 @@ int sProducts_removeProducts(sProducts array[], int TAM)
 	return rtn;
 }
 
-/// @fn int sProducts_modifyData(sProducts[], int)
-/// @brief Recibe el array cuyo tipo de dato es sProductsenger y su tamaño, muestra un listado de
-/// Products donde se encuentran todos los datos de cada uno, pide el ID a modificar y
-/// usa sProducts_modifyOne para modificar el campo que el usuario elija en el menu mostrado
-/// @param array
-/// @param TAM
-/// @return @return Retorna 1 si se pudo modificar el campo requerido o -1 si hubo algun error
-int sProducts_modifyData(sProducts array[], int TAM)
-{
-	int rtn = 0;
-	int idProducto;
-	int index;
-	int flag = 0;
-	sProducts auxiliar;
-
-	///LISTO TODOS LOS Products
-	if(sProducts_printProducts(array, TAM))
-	{
-		///BANDERA EN 1 SI HAY Products DADOS DE ALTA PARA LISTAR
-		flag = 1;
-	}
-
-	///SI HAY Products PARA MODIFICAR
-	if(flag)
-	{
-		///PIDO ID A MODIFICAR
-		utn_getNumero("\nINGRESE ID DEL Producto A MODIFICAR: ", "ERROR. ", 1000, 9999, 3, &idProducto);
-
-		///BUSCO INDEX POR ID EN ARRAY
-		while(sProducts_findProductsByID(array, TAM, idProducto) == -1)
-		{
-			puts("NO EXISTE ID.");
-			///PIDO ID A MODIFICAR
-			utn_getNumero("\nREINGRESE ID DEL Producto A MODIFICAR: ", "ERROR. ", 1000, 9999, 3, &idProducto);
-		}
-
-		///OBTENGO INDEX DEL ARRAY DE Products A MODIFICAR
-		index = sProducts_findProductsByID(array, TAM, idProducto);
-
-		///LLAMO A FUNCION QUE MODIFICA Products
-		auxiliar = sProducts_modifyOne(array[index]);
-
-		///MODIFICACION ACEPTADA
-		array[index] = auxiliar;
-
-		//RETORNO 1 SI SE MODIFICO CORRECTAMENTE
-		rtn = 1;
-	}
-
-	return rtn;
-}
-
 /// @fn void sProducts_initProducts(sProducts[], int)
 /// @brief Recibe el array cuyo tipo de dato es sProducts y su tamaño, para asi darle un indice LIBRE
 /// @param array
@@ -484,6 +463,11 @@ int sProducts_printProducts(sProducts Products[], int TAM)
 	///SI EXISTE EL ARRAY Y EL LIMITE ES VALIDO
 	if (Products != NULL && TAM > 0)
 	{
+		puts("\n\t\t LISTA DE PRODUCTOS");
+		puts("+----------------------------------------------------------------+");
+		puts("| ID |     NOMBRE     |   STOCK  |   PRECIO   |     CATEGORIA    |");
+		puts("+----------------------------------------------------------------+");
+
 		///RECORRO EL ARRAY
 		for (i = 0; i < TAM; i++)
 		{
@@ -491,9 +475,10 @@ int sProducts_printProducts(sProducts Products[], int TAM)
 			if (Products[i].isEmpty == OCUPADO)
 			{
 				///ORDENO ALFABETICAMENTE
-				sProducts_sortProducts(Products, TAM);
 				///IMPRIMO UN SOLO Producto
+				sProducts_sortProducts(Products, TAM);
 				sProducts_printOne(Products[i]);
+				puts("+----------------------------------------------------------------+");
 				///CONTADOR DE Products
 				cantidad++;
 			}
@@ -504,6 +489,76 @@ int sProducts_printProducts(sProducts Products[], int TAM)
 	if (cantidad > 0)
 	{
 		rtn = 1;
+	}
+
+	return rtn;
+}
+
+int sProducts_printUserProducts(sProducts Products[], int TAM, int idUsuario)
+{
+	int i;
+	int rtn = 0;
+	int cantidad = 0;
+
+	///SI EXISTE EL ARRAY Y EL LIMITE ES VALIDO
+	if (Products != NULL && TAM > 0)
+	{
+		puts("\n\t\t LISTA DE PRODUCTOS");
+		puts("+----------------------------------------------------------------+");
+		puts("| ID |     NOMBRE     |   STOCK  |   PRECIO   |     CATEGORIA    |");
+		puts("+----------------------------------------------------------------+");
+
+		///RECORRO EL ARRAY
+		for (i = 0; i < TAM; i++)
+		{
+			if(Products[i].FK_idVendedor == idUsuario)
+			{
+				if (Products[i].isEmpty == OCUPADO)
+				{
+					sProducts_printOne(Products[i]);
+					puts("+----------------------------------------------------------------+");
+					cantidad++;
+				}
+			}
+		}
+	}
+
+	///SI CANTIDAD == 0 - NO HUBO Products PARA MOSTRAR (ARRAY SIN ALTAS)
+	if (cantidad > 0)
+	{
+		rtn = 1;
+	}
+
+	return rtn;
+}
+
+int sProducts_printFindProductsByName(sProducts productos[], int TAM, char nombre[])
+{
+	int i;
+	int rtn = -1;
+
+	///SI EXISTE EL ARRAY Y EL LIMITE ES VALIDO
+	if (productos != NULL && TAM > 0)
+	{
+		puts("\n\t\t LISTA DE PRODUCTOS");
+		puts("+----------------------------------------------------------------+");
+		puts("| ID |     NOMBRE     |   STOCK  |   PRECIO   |     CATEGORIA    |");
+		puts("+----------------------------------------------------------------+");
+		sProduct_sortProductsByStock(productos, TAM);
+
+		///RECORRO EL ARRAY
+		for (i = 0; i < TAM; i++)
+		{
+			if(productos[i].isEmpty == OCUPADO)
+			{
+				if(strcmp(productos[i].nombreProducto, nombre) == 0)
+				{
+					sProducts_printOne(productos[i]);
+					puts("+----------------------------------------------------------------+");
+					rtn = 1;
+				}
+			}
+		}
 	}
 
 	return rtn;
@@ -545,7 +600,7 @@ int sProducts_CargaForzada(sProducts productos[])
 		productos[3].isEmpty = OCUPADO;
 		productos[3].FK_idVendedor = 100;
 		productos[3].stockDisponible = 25;
-		strcpy(productos[3].nombreProducto, "Nike blazer");
+		strcpy(productos[3].nombreProducto, "Nike Blazer");
 
 		productos[4].precio = 2000;
 		productos[4].idProducto = 1004;
